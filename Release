@@ -1,0 +1,16 @@
+Origin: 自用源
+Label: 自用源
+Suite: stable
+Version: 1.0
+Codename: ios
+Architectures: iphoneos-arm64 iphoneos-arm64e
+Components: main
+Description: 自用源
+Support: https://mayochow.github.io/zyy.github.io/
+Icon: https://mayochow.github.io/zyy.github.io/CydiaIcon.png
+MD5Sum:
+ 04cb1eb6ddf036ddfea604372b86582d  825 Packages
+ 5474400809a2a20b11cb907569148143  580 Packages.gz
+SHA256:
+ 38fd45c7c1a16d6cc41fdd94728f679d6ecbffe0197e714b7723229e7e7fa1c9  825 Packages
+ 7d21abefa2916a11ce7205b6095f3bc6e923964206ded8807b99081a57f64766  580 Packages.gz

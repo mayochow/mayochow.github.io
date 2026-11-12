@@ -1,0 +1,17 @@
+Package: local.albumcreationguard.roothide
+Architecture: iphoneos-arm64e
+Version: 0.1.0~experimental1
+Section: Tweaks
+Maintainer: Local Build
+Depends: mobilesubstrate, firmware (>= 14.0)
+Conflicts: com.lenglengyu.disableappcreationalbums-rootless
+Replaces: com.lenglengyu.disableappcreationalbums-rootless
+Filename: debs/local_albumcreationguard_roothide_0_1_0experimental1_iphoneos_arm64e.deb
+Size: 6780
+MD5sum: 6a1257df255abc1df450287c40c62b48
+SHA1: 140f0d302ab34ec0eb4fe52edc530e0bed2c0bd2
+SHA256: dcc975c9ced06ccae37ae6c74726b28ff0c700d3053c27b8e3566714cb2336f4
+SHA512: 7c54b4018dfd7344c0c6eb6ff0f2466bd85c785fb16023a8a0e225102ff58d3a042f12fdca2cdfcab972645820a95b64485375708cb7447ee431889f41771d90
+Description: Rewritten per-process album creation blocker. Device validation required.
+Name: 禁止其他app创建相册
+
