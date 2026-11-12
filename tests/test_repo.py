@@ -58,6 +58,11 @@ class RepoTests(unittest.TestCase):
             self.put(name + '.deb', deb(arch, payload))
         site = self.run_build()
         for folder in [site, site / 'rootful', site / 'rootless', site / 'roothide']:
+            # Sileo RepoManager requires the components key even for flat repos.
+            release_fields = dict(line.split(':', 1) for line in (folder / 'Release').read_text().splitlines()
+                                  if line and not line.startswith((' ', '\t')))
+            for required in ('Architectures', 'Components'):
+                self.assertTrue(release_fields[required].strip())
             raw = (folder / 'Packages').read_bytes()
             self.assertEqual(gzip.decompress((folder / 'Packages.gz').read_bytes()), raw)
             self.assertEqual(bz2.decompress((folder / 'Packages.bz2').read_bytes()), raw)

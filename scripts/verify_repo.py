@@ -23,6 +23,12 @@ def verify(base, manifest):
         data = fetch(name)
         if len(data) != expected['size'] or hashlib.sha256(data).hexdigest() != expected['sha256']:
             raise ValueError('Size/hash mismatch: ' + name)
+        if name == 'Release' or name.endswith('/Release'):
+            fields = dict(line.split(':', 1) for line in data.decode('utf-8').splitlines()
+                          if line and not line.startswith((' ', '\t')))
+            for required in ('Architectures', 'Components'):
+                if not fields.get(required, '').strip():
+                    raise ValueError('Missing Sileo Release field: ' + required + ' in ' + name)
     print('Verified', len(manifest), 'published files including every DEB:', base)
 
 

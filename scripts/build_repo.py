@@ -144,7 +144,7 @@ def write_indexes(folder, stanzas, architectures, label, base_url):
     for name, content in blobs.items():
         (folder / name).write_bytes(content)
     lines = ["Origin: Mayo Personal Repo", "Label: " + label,
-             "Suite: stable", "Codename: personal", "Version: 1.0",
+             "Suite: stable", "Codename: personal", "Version: 1.0", "Components: main",
              "Date: " + datetime.datetime.now(datetime.timezone.utc).strftime("%a, %d %b %Y %H:%M:%S +0000"),
              "Architectures: " + " ".join(sorted(set(architectures))),
              "Description: Personal jailbreak packages", "Support: " + base_url]
