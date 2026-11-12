@@ -6,9 +6,15 @@ import subprocess
 import tempfile
 from build_repo import parse_control
 
+# Some third-party DEBs store control with mode 000. dpkg-deb --info/-f
+# unpack control into a temporary directory before reading it. Use root only
+# for those read-only commands on the disposable Ubuntu runner, as on-device
+# dpkg normally does. Never install packages or execute maintainer scripts.
+CONTROL_READER = ['sudo', '-n', 'dpkg-deb']
+
 for source in Path('debs').rglob('*'):
     if source.is_file() and source.suffix.lower() == '.deb':
-        subprocess.run(['dpkg-deb', '--info', str(source)], check=True, stdout=subprocess.DEVNULL)
+        subprocess.run(CONTROL_READER + ['--info', str(source)], check=True, stdout=subprocess.DEVNULL)
         # Read payload archive too; never execute maintainer scripts or install.
         subprocess.run(['dpkg-deb', '--contents', str(source)], check=True, stdout=subprocess.DEVNULL)
 
@@ -22,7 +28,7 @@ for index in Path('_site').rglob('Packages'):
         assert hashlib.sha256(data).hexdigest() == fields['sha256']
         assert len(data) == int(fields['size'])
         for field in ('Package', 'Version', 'Architecture'):
-            actual = subprocess.check_output(['dpkg-deb', '-f', str(package), field], text=True).strip()
+            actual = subprocess.check_output(CONTROL_READER + ['-f', str(package), field], text=True).strip()
             assert actual == fields[field.lower()], (package, field, actual)
         subprocess.run(['dpkg', '--validate-version', fields['version']], check=True)
 print('All DEB identity fields, paths, sizes and SHA256 hashes match Debian tools.')
