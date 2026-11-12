@@ -22,7 +22,7 @@ GROUPS = tuple(ARCHES.values())
 GENERATED = {"filename", "size", "md5sum", "sha1", "sha256", "sha512"}
 
 
-def parse_control(text):
+def parse_control(text, allow_missing_metadata=False):
     fields, key = {}, None
     for line in text.replace("\r\n", "\n").splitlines():
         if not line:
@@ -37,7 +37,8 @@ def parse_control(text):
         if not sep or not re.fullmatch(r"[a-z0-9][a-z0-9-]*", key) or key in fields:
             raise ValueError("invalid/duplicate control field")
         fields[key] = value.strip()
-    for name in ("package", "version", "architecture", "description", "maintainer"):
+    required = ('package', 'version', 'architecture') if allow_missing_metadata else ('package', 'version', 'architecture', 'description', 'maintainer')
+    for name in required:
         if not fields.get(name):
             raise ValueError("missing " + name)
     if not re.fullmatch(r"[a-z0-9][a-z0-9+.-]+", fields["package"]):
@@ -88,7 +89,13 @@ def read_deb(data):
         entries = [m for m in archive if m.name.removeprefix("./") == "control"]
         if len(entries) != 1 or not entries[0].isfile() or entries[0].size > 1024 * 1024:
             raise ValueError("missing/oversized/invalid control file")
-        control = parse_control(archive.extractfile(entries[0]).read().decode("utf-8").rstrip("\n"))
+        control = parse_control(archive.extractfile(entries[0]).read().decode("utf-8").rstrip("\n"), allow_missing_metadata=True)
+        # Incomplete descriptive fields do not determine compatibility. Supply
+        # index defaults without changing original DEB bytes or package identity.
+        if not control.get('description'):
+            control['description'] = control.get('name') or control['package']
+        if not control.get('maintainer'):
+            control['maintainer'] = 'Unknown'
     paths = []
     with open_tar(members, "data") as archive:
         for member in archive:

@@ -15,7 +15,7 @@ from build_repo import build, parse_control, read_deb
 from verify_repo import verify
 
 
-def deb(arch='iphoneos-arm64', payload='var/jb/Library/MobileSubstrate/DynamicLibraries/test.dylib', package='local.test', version='1.0', compression='xz'):
+def deb(arch='iphoneos-arm64', payload='var/jb/Library/MobileSubstrate/DynamicLibraries/test.dylib', package='local.test', version='1.0', compression='xz', control_override=None):
     def archive(name, data):
         stream = io.BytesIO()
         with tarfile.open(fileobj=stream, mode='w:' + compression) as tf:
@@ -24,6 +24,8 @@ def deb(arch='iphoneos-arm64', payload='var/jb/Library/MobileSubstrate/DynamicLi
             tf.addfile(entry, io.BytesIO(data))
         return stream.getvalue()
     control = f'Package: {package}\nVersion: {version}\nArchitecture: {arch}\nMaintainer: Test\nDescription: first line\n second line\nDepends: firmware (>= 14.0)\nSection: Tweaks\n'
+    if control_override is not None:
+        control = control_override
     members = [('debian-binary', b'2.0\n'), ('control.tar.' + compression, archive('control', control.encode())),
                ('data.tar.' + compression, archive(payload, b'test bytes'))]
     result = b'!<arch>\n'
@@ -201,6 +203,19 @@ class RepoTests(unittest.TestCase):
         (self.root / 'display-overrides.json').write_text(json.dumps({'local.test': {'name': 'Test\nArchitecture: all'}}))
         with self.assertRaisesRegex(ValueError, 'single line'):
             self.run_build()
+
+    def test_blank_descriptive_fields_get_index_defaults_only(self):
+        original = deb(control_override='Package: local.test\nName: My Test\nVersion: 1.0\nArchitecture: iphoneos-arm64\nDescription: \nMaintainer: \n')
+        self.put('blank.deb', original)
+        site = self.run_build()
+        fields = parse_control((site / 'Packages').read_text().strip())
+        self.assertEqual(fields['description'], 'My Test')
+        self.assertEqual(fields['maintainer'], 'Unknown')
+        self.assertEqual((site / fields['filename']).read_bytes(), original)
+
+    def test_missing_identity_still_rejected_with_metadata_defaults(self):
+        with self.assertRaisesRegex(ValueError, 'missing architecture'):
+            read_deb(deb(control_override='Package: local.test\nVersion: 1.0\n'))
 
 
 if __name__ == '__main__':
