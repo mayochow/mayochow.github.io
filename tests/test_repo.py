@@ -19,9 +19,10 @@ def deb(arch='iphoneos-arm64', payload='var/jb/Library/MobileSubstrate/DynamicLi
     def archive(name, data):
         stream = io.BytesIO()
         with tarfile.open(fileobj=stream, mode='w:' + compression) as tf:
-            entry = tarfile.TarInfo('./' + name)
-            entry.size = len(data)
-            tf.addfile(entry, io.BytesIO(data))
+            if name is not None:
+                entry = tarfile.TarInfo('./' + name)
+                entry.size = len(data)
+                tf.addfile(entry, io.BytesIO(data))
         return stream.getvalue()
     control = f'Package: {package}\nVersion: {version}\nArchitecture: {arch}\nMaintainer: Test\nDescription: first line\n second line\nDepends: firmware (>= 14.0)\nSection: Tweaks\n'
     if control_override is not None:
@@ -176,7 +177,17 @@ class RepoTests(unittest.TestCase):
         for path in included.rglob('*.deb'):
             fields, paths = read_deb(path.read_bytes())
             self.assertIn(fields['architecture'], ('iphoneos-arm', 'iphoneos-arm64', 'iphoneos-arm64e', 'all'))
-            self.assertTrue(paths)
+
+    def test_metadata_only_package_preserves_identity_and_archive(self):
+        # Empty data archives are valid for meta/script-only packages. Reading
+        # both tar archives still detects corrupt or missing DEB members.
+        original = deb(payload=None)
+        self.put('meta.deb', original)
+        site = self.run_build()
+        fields = parse_control((site / 'Packages').read_text().strip())
+        self.assertEqual(fields['package'], 'local.test')
+        self.assertEqual(fields['depends'], 'firmware (>= 14.0)')
+        self.assertEqual((site / fields['filename']).read_bytes(), original)
 
     def test_display_override_preserves_deb_identity_and_bytes(self):
         original = deb()
