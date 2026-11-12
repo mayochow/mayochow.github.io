@@ -176,6 +176,32 @@ class RepoTests(unittest.TestCase):
             self.assertIn(fields['architecture'], ('iphoneos-arm', 'iphoneos-arm64', 'iphoneos-arm64e', 'all'))
             self.assertTrue(paths)
 
+    def test_display_override_preserves_deb_identity_and_bytes(self):
+        original = deb()
+        self.put('one.deb', original)
+        (self.root / 'display-overrides.json').write_text(json.dumps({'local.test': {
+            'name': '我的插件', 'description': '简单说明\n第二行\n\n更多说明'}}), encoding='utf-8')
+        site = self.run_build()
+        for folder in (site, site / 'rootless'):
+            fields = parse_control((folder / 'Packages').read_text(encoding='utf-8').strip())
+            self.assertEqual(fields['name'], '我的插件')
+            self.assertEqual(fields['description'], '简单说明\n 第二行\n .\n 更多说明')
+            self.assertEqual(fields['package'], 'local.test')
+            self.assertEqual(fields['version'], '1.0')
+            self.assertEqual(fields['architecture'], 'iphoneos-arm64')
+            self.assertEqual(fields['depends'], 'firmware (>= 14.0)')
+            self.assertEqual((folder / fields['filename']).read_bytes(), original)
+
+    def test_display_override_rejects_identity_changes(self):
+        (self.root / 'display-overrides.json').write_text(json.dumps({'local.test': {'architecture': 'all'}}))
+        with self.assertRaisesRegex(ValueError, 'only name and description'):
+            self.run_build()
+
+    def test_display_override_rejects_name_field_injection(self):
+        (self.root / 'display-overrides.json').write_text(json.dumps({'local.test': {'name': 'Test\nArchitecture: all'}}))
+        with self.assertRaisesRegex(ValueError, 'single line'):
+            self.run_build()
+
 
 if __name__ == '__main__':
     unittest.main()

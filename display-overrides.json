@@ -1,0 +1,6 @@
+{
+  "local.albumcreationguard.roothide": {
+    "name": "AlbumCreationGuard (RootHide, experimental)",
+    "description": "Rewritten per-process album creation blocker. Device validation required."
+  }
+}

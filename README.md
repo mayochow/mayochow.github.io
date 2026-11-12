@@ -37,7 +37,26 @@ Actions 会自动读取包信息、分类、生成 APT 索引并发布，再检�
 Pages 设置使用 **GitHub Actions**；只发布工作流生成的 `_site/`。
 无需 PAT、无需配置 Secrets。公开仓库和 Pages 的包可被其他人下载。
 旧工具的 `overrides.json`、`sections.json` 和旧索引脚本不再参与发布。
-显示名取自 DEB 自身，主源分类使用 rootful/rootless/roothide。
+显示名默认取自 DEB 自身，主源分类使用 rootful/rootless/roothide。
+
+## 自己改插件的显示名称和说明
+
+打开仓库根目录 `display-overrides.json`，点击铅笔编辑。
+在插件对应的 Package 标识下面修改 `name`（名称）、`description`（说明），
+点 **Commit changes**，提交到 main。自动发布成功后在 Sileo 刷新软件源。
+文件已填入现有插件的原名称与原说明，可直接改这两项。
+
+标识如 `local.albumcreationguard.roothide` 用来准确找到插件，请保留不变。
+新插件可在这个 JSON 对象里增加同样格式的条目，条目之间用英文逗号分隔。
+包标识可以在 `classification.json` 的 `package` 字段查看。
+上传前写好规则或上传后再改都可以；同包的新版本继续沿用规则。
+删除某条 name 或 description 配置项会恢复使用 DEB 自身对应文字。
+说明换行使用 JSON 的换行转义，名称保持一行，标点引号使用英文格式。
+
+这只改变源索引里展示的文字，原 DEB 的字节、Package、Version、Architecture、
+依赖及校验值均不变；不会修改手机设置里的插件标题或应用图标名称。
+若需要下载的 DEB 本身也带新名称，要改原包 control 中的 Name 和 Description，
+重新打包后上传；同包同架构替换已有发布内容时，应递增 Version。
 
 ## 本地检查（可选）
 

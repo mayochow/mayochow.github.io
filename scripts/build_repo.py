@@ -122,6 +122,39 @@ def classify(fields, paths, digest, config):
     return targets
 
 
+def display_fields(fields, overrides):
+    """Change repository display text only; DEB bytes and identity stay intact."""
+    result = dict(fields)
+    rule = overrides.get(fields['package'], {})
+    for key, value in rule.items():
+        if key == 'name':
+            result['name'] = value.strip()
+        elif key == 'description':
+            lines = value.split('\n')
+            result['description'] = lines[0].strip() + ''.join('\n ' + (line.strip() or '.') for line in lines[1:])
+    return result
+
+
+def load_display_overrides(source):
+    path = source / 'display-overrides.json'
+    config = json.loads(path.read_text(encoding='utf-8')) if path.exists() else {}
+    if not isinstance(config, dict):
+        raise ValueError('display-overrides.json must contain an object')
+    for package, rule in config.items():
+        if not re.fullmatch(r'[a-z0-9][a-z0-9+.-]+', package) or not isinstance(rule, dict):
+            raise ValueError('invalid display override package/rule')
+        for key, value in rule.items():
+            if key not in ('name', 'description'):
+                raise ValueError('display overrides allow only name and description')
+            if not isinstance(value, str) or not value.strip() or '\r' in value or '\x00' in value:
+                raise ValueError('display override text must be nonempty and contain no CR/NUL')
+            if key == 'name' and '\n' in value:
+                raise ValueError('display name must be a single line')
+            if key == 'description' and not value.split('\n')[0].strip():
+                raise ValueError('description must begin with a summary line')
+    return config
+
+
 def stanza(fields, filename, data, group=None):
     f = {k: v for k, v in fields.items() if k not in GENERATED}
     if group:
@@ -166,6 +199,7 @@ def build(source, output, base_url):
     assignments = config.get("all_assignments", {})
     if not isinstance(assignments, dict):
         raise ValueError("all_assignments must be an object")
+    overrides = load_display_overrides(source)
     records, identities, digests = [], set(), set()
     for path in sorted((source / "debs").rglob("*")):
         if path.is_symlink():
@@ -194,6 +228,7 @@ def build(source, output, base_url):
         site.mkdir()
         combined, grouped, report = [], {g: [] for g in GROUPS}, []
         for filename, data, digest, fields, targets in records:
+            fields = display_fields(fields, overrides)
             # One immutable copy per package, shared by the combined index.
             first = targets[0]
             for group in targets:
@@ -204,7 +239,8 @@ def build(source, output, base_url):
             combined.append(stanza(fields, first + "/debs/" + digest + ".deb", data,
                                    first if len(targets) == 1 else "universal-reviewed"))
             report.append(dict(source=filename, package=fields["package"], version=fields["version"],
-                               architecture=fields["architecture"], sha256=digest, groups=targets))
+                               architecture=fields["architecture"], sha256=digest, groups=targets,
+                               display_name=fields.get('name', fields['package']), description=fields['description']))
         write_indexes(site, combined, list(ARCHES) + (["all"] if any(r["architecture"] == "all" for r in report) else []),
                       "Mayo Personal Repo", base_url)
         for arch, group in ARCHES.items():
